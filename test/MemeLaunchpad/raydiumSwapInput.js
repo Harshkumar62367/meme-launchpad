@@ -22,7 +22,7 @@ if (process.env.ANCHOR_WALLET == undefined) {
     process.exit();
 }
 const keypair = web3.Keypair.fromSecretKey(
-    bs58.decode(process.env.PRIVATE_KEY_SOLANA)
+    bs58.default.decode(process.env.PRIVATE_KEY_SOLANA)
 );
 
 const VALID_PROGRAM_ID = new Set([CREATE_CPMM_POOL_PROGRAM.toBase58(), DEV_CREATE_CPMM_POOL_PROGRAM.toBase58()])
