@@ -25,6 +25,8 @@ const defaultTokenMintsArray = [
 ];
 let atasToBeCreated = '';
 
+// Creates Associated Token Accounts (ATAs) for specified public keys and token mints
+// If an ATA doesn't exist, it will be created in a single transaction
 async function createATA(publicKeys, tokenMintsArray) {
     if (await connection.getBalance(keypair.publicKey) < 100000000) {
         await config.utils.airdropSOL(keypair);
@@ -38,10 +40,10 @@ async function createATA(publicKeys, tokenMintsArray) {
     for (let i = 0, len = publicKeys.length; i < len; ++i) {
         for (let y = 0, leny = tokenMintsArray.length; y < leny; ++y) {
             const associatedToken = getAssociatedTokenAddressSync(
-                new web3.PublicKey(tokenMintsArray[y]), 
-                publicKeys[i], 
-                true, 
-                TOKEN_PROGRAM_ID, 
+                new web3.PublicKey(tokenMintsArray[y]),
+                publicKeys[i],
+                true,
+                TOKEN_PROGRAM_ID,
                 ASSOCIATED_TOKEN_PROGRAM_ID
             );
             const ataInfo = await connection.getAccountInfo(associatedToken);
@@ -55,14 +57,14 @@ async function createATA(publicKeys, tokenMintsArray) {
                         keypair.publicKey,
                         associatedToken,
                         publicKeys[i],
-                        new web3.PublicKey(tokenMintsArray[y]), 
-                        TOKEN_PROGRAM_ID, 
+                        new web3.PublicKey(tokenMintsArray[y]),
+                        TOKEN_PROGRAM_ID,
                         ASSOCIATED_TOKEN_PROGRAM_ID
                     )
                 );
             } else {
                 const ATA = await getAssociatedTokenAddress(
-                    new web3.PublicKey(tokenMintsArray[y]), 
+                    new web3.PublicKey(tokenMintsArray[y]),
                     new web3.PublicKey(publicKeys[i]),
                     true
                 );
@@ -83,7 +85,7 @@ async function createATA(publicKeys, tokenMintsArray) {
     } else {
         return console.error('\nNo instructions to be performed, all ATA accounts are initialized.');
     }
-} 
+}
 
 module.exports = {
     createATA

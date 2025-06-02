@@ -26,10 +26,14 @@ const keypair = web3.Keypair.fromSecretKey(
 );
 
 const VALID_PROGRAM_ID = new Set([CREATE_CPMM_POOL_PROGRAM.toBase58(), DEV_CREATE_CPMM_POOL_PROGRAM.toBase58()])
+
+// Validates if the given program ID is a valid CPMM (Constant Product Market Maker) pool
 function isValidCpmm(id) {
     return VALID_PROGRAM_ID.has(id);
 }
 
+// Performs a swap operation on a Raydium pool with specified parameters
+// Creates a simulated swap to generate fees for testing purposes
 async function raydiumSwapInput(poolId) {
     console.log('raydiumSwapInput', poolId);
 
@@ -45,12 +49,12 @@ async function raydiumSwapInput(poolId) {
     let poolInfo;
     let poolKeys;
     let rpcData;
-    
+
     if (raydium.cluster === "mainnet") {
         const data = await raydium.api.fetchPoolById({ ids: poolId });
         poolInfo = data[0];
         if (!isValidCpmm(poolInfo.programId))
-          throw new Error("Target pool is not CPMM pool");
+            throw new Error("Target pool is not CPMM pool");
     } else {
         const data = await raydium.cpmm.getPoolInfoFromRpc(poolId);
         poolInfo = data.poolInfo;
@@ -95,4 +99,3 @@ async function raydiumSwapInput(poolId) {
 module.exports = {
     raydiumSwapInput
 };
-  

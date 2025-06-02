@@ -18,7 +18,8 @@ let poolId;
 const RECEIPTS_COUNT = 1;
 
 describe('Test init', async function () {
-    before(async function() {
+    // Setup test environment and deploy/attach contracts
+    before(async function () {
         [owner] = await ethers.getSigners();
         if (await ethers.provider.getBalance(owner.address) == 0) {
             console.error('Deployer has 0 NEON balance, please grab some at https://neonfaucet.org/.');
@@ -59,7 +60,8 @@ describe('Test init', async function () {
         payer = await MemeLaunchpad.getPayer();
     });
 
-    describe('MemeLaunchpad tests', function() {
+    describe('MemeLaunchpad tests', function () {
+        // Creates a new token sale with specified parameters and sets up necessary ATAs
         it('createTokenSale', async function () {
             let tx = await MemeLaunchpad.createTokenSale(
                 "TEST" + Date.now().toString(),
@@ -86,6 +88,7 @@ describe('Test init', async function () {
             )
         });
 
+        // Tests buying tokens when funding goal is not reached
         it('buy ( not reaching the fundingGoal )', async function () {
             const initialWSOLBalance = await WSOL.balanceOf(owner.address);
             const initialWSOLBalanceContract = await WSOL.balanceOf(MemeLaunchpad.target);
@@ -113,6 +116,7 @@ describe('Test init', async function () {
             expect(await WSOL.balanceOf(MemeLaunchpad.target)).to.be.greaterThan(initialWSOLBalanceContract);
         });
 
+        // Tests buying tokens when funding goal is reached and creates Raydium pool
         it('buy ( reaching the fundingGoal )', async function () {
             const initialTokenABalance = await WSOL.balanceOf(owner.address);
             const initialTokenBBalance = await Token.balanceOf(owner.address);
@@ -149,23 +153,24 @@ describe('Test init', async function () {
             expect(await Token.balanceOf(MemeLaunchpad.target)).to.eq(0);
         });
 
+        // Tests collecting fees from both token sale and Raydium pool
         it('collectPoolFees', async function () {
             // collect token sale fee
             const wsolBalance = await WSOL.balanceOf(owner.address);
-            
+
             let tx = await MemeLaunchpad.claimTokenSaleFee();
             await tx.wait(RECEIPTS_COUNT);
             console.log(tx.hash, 'claimTokenSaleFee tx');
 
             expect(await WSOL.balanceOf(owner.address)).to.be.greaterThan(wsolBalance);
-            
+
             // collect Raydium locked LP fee
             await raydiumSwapInput(ethers.encodeBase58(poolId)); // fake some swap in order to be able to collect some fees
             await config.utils.asyncTimeout(10000);
 
             const initialTokenABalance = await WSOL.balanceOf(owner.address);
             const initialTokenBBalance = await Token.balanceOf(owner.address);
-            
+
             tx = await MemeLaunchpad.collectPoolFees(
                 poolId,
                 WSOL.target,

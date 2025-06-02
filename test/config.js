@@ -28,21 +28,25 @@ const config = {
         }
     },
     utils: {
-        publicKeyToBytes32: function(pubkey) {
+        // Converts a Solana public key to a 32-byte hex string
+        publicKeyToBytes32: function (pubkey) {
             return ethers.zeroPadValue(ethers.toBeHex(ethers.decodeBase58(pubkey)), 32);
         },
-        addressToBytes32: function(address) {
+        // Converts an EVM address to a 32-byte hex string
+        addressToBytes32: function (address) {
             return ethers.zeroPadValue(ethers.toBeHex(address), 32);
         },
+        // Calculates the contract account address for a given EVM address and program ID
         calculateContractAccount: function (contractEvmAddress, neonEvmProgram) {
             const neonContractAddressBytes = Buffer.from(config.utils.isValidHex(contractEvmAddress) ? contractEvmAddress.replace(/^0x/i, '') : contractEvmAddress, 'hex');
             const seed = [
                 new Uint8Array([0x03]),
                 new Uint8Array(neonContractAddressBytes)
             ];
-        
+
             return web3.PublicKey.findProgramAddressSync(seed, neonEvmProgram);
         },
+        // Calculates a PDA (Program Derived Address) account for given parameters
         calculatePdaAccount: function (prefix, tokenEvmAddress, salt, neonEvmProgram) {
             const neonContractAddressBytes = Buffer.from(config.utils.isValidHex(tokenEvmAddress) ? tokenEvmAddress.replace(/^0x/i, '') : tokenEvmAddress, 'hex');
             const seed = [
@@ -51,10 +55,11 @@ const config = {
                 new Uint8Array(neonContractAddressBytes),
                 Buffer.from(Buffer.concat([Buffer.alloc(12), Buffer.from(config.utils.isValidHex(salt) ? salt.substring(2) : salt, 'hex')]), 'hex')
             ];
-        
+
             return web3.PublicKey.findProgramAddressSync(seed, neonEvmProgram);
         },
-        isValidHex: function(hex) {
+        // Validates if a string is a valid hex value
+        isValidHex: function (hex) {
             const isHexStrict = /^(0x)?[0-9a-f]*$/i.test(hex.toString());
             if (!isHexStrict) {
                 throw new Error(`Given value "${hex}" is not a valid hex string.`);
@@ -62,35 +67,39 @@ const config = {
                 return isHexStrict;
             }
         },
-        toFixed: function(num, fixed) {
+        // Formats a number to a fixed number of decimal places
+        toFixed: function (num, fixed) {
             let re = new RegExp('^-?\\d+(?:\.\\d{0,' + (fixed || -1) + '})?');
             return num.toString().match(re)[0];
         },
-        asyncTimeout: async function(timeout) {
+        // Creates a promise that resolves after specified timeout
+        asyncTimeout: async function (timeout) {
             return new Promise((resolve) => {
                 setTimeout(() => resolve(), timeout);
             })
         },
-        prepareInstructionAccounts: function(instruction, overwriteAccounts) {
+        // Prepares instruction accounts for Solana transaction
+        prepareInstructionAccounts: function (instruction, overwriteAccounts) {
             let encodeKeys = '';
             for (let i = 0, len = instruction.keys.length; i < len; ++i) {
-                if (typeof(overwriteAccounts) != "undefined" && Object.hasOwn(overwriteAccounts, i)) {
+                if (typeof (overwriteAccounts) != "undefined" && Object.hasOwn(overwriteAccounts, i)) {
                     console.log(config.utils.publicKeyToBytes32(overwriteAccounts[i].key), 'publicKey');
-                    encodeKeys+= ethers.solidityPacked(["bytes32"], [config.utils.publicKeyToBytes32(overwriteAccounts[i].key)]).substring(2);
-                    encodeKeys+= ethers.solidityPacked(["bool"], [overwriteAccounts[i].isSigner]).substring(2);
-                    encodeKeys+= ethers.solidityPacked(["bool"], [overwriteAccounts[i].isWritable]).substring(2);
+                    encodeKeys += ethers.solidityPacked(["bytes32"], [config.utils.publicKeyToBytes32(overwriteAccounts[i].key)]).substring(2);
+                    encodeKeys += ethers.solidityPacked(["bool"], [overwriteAccounts[i].isSigner]).substring(2);
+                    encodeKeys += ethers.solidityPacked(["bool"], [overwriteAccounts[i].isWritable]).substring(2);
                 } else {
                     console.log(config.utils.publicKeyToBytes32(instruction.keys[i].pubkey.toString()), 'publicKey');
-                    encodeKeys+= ethers.solidityPacked(["bytes32"], [config.utils.publicKeyToBytes32(instruction.keys[i].pubkey.toString())]).substring(2);
-                    encodeKeys+= ethers.solidityPacked(["bool"], [instruction.keys[i].isSigner]).substring(2);
-                    encodeKeys+= ethers.solidityPacked(["bool"], [instruction.keys[i].isWritable]).substring(2);
+                    encodeKeys += ethers.solidityPacked(["bytes32"], [config.utils.publicKeyToBytes32(instruction.keys[i].pubkey.toString())]).substring(2);
+                    encodeKeys += ethers.solidityPacked(["bool"], [instruction.keys[i].isSigner]).substring(2);
+                    encodeKeys += ethers.solidityPacked(["bool"], [instruction.keys[i].isWritable]).substring(2);
                 }
             }
 
             return '0x' + ethers.zeroPadBytes(ethers.toBeHex(instruction.keys.length), 8).substring(2) + encodeKeys;
         },
-        prepareInstructionData: function(instruction) {
-            const packedInstructionData = ethers.solidityPacked( 
+        // Prepares instruction data for Solana transaction
+        prepareInstructionData: function (instruction) {
+            const packedInstructionData = ethers.solidityPacked(
                 ["bytes"],
                 [instruction.data]
             ).substring(2);
@@ -98,13 +107,15 @@ const config = {
 
             return '0x' + ethers.zeroPadBytes(ethers.toBeHex(instruction.data.length), 8).substring(2) + packedInstructionData;
         },
-        prepareInstruction: function(instruction) {
+        // Combines program ID, accounts, and data into a complete instruction
+        prepareInstruction: function (instruction) {
             return config.utils.publicKeyToBytes32(instruction.programId.toBase58()) + config.utils.prepareInstructionAccounts(instruction).substring(2) + config.utils.prepareInstructionData(instruction).substring(2);
         },
         orcaHelper: {
-            getParamsFromPools: function(
-                pools, 
-                PDAUtil, 
+            // Extracts and formats pool parameters for Orca DEX operations
+            getParamsFromPools: function (
+                pools,
+                PDAUtil,
                 programId,
                 ataContractTokenA,
                 ataContractTokenB,
@@ -114,7 +125,7 @@ const config = {
                 const whirlpoolTwo = pools[1].address;
                 const oracleOne = PDAUtil.getOracle(programId, whirlpoolOne).publicKey;
                 const oracleTwo = PDAUtil.getOracle(programId, whirlpoolTwo).publicKey;
-    
+
                 return {
                     whirlpoolOne: whirlpoolOne,
                     whirlpoolTwo: whirlpoolTwo,
@@ -130,43 +141,41 @@ const config = {
                     oracleTwo
                 };
             },
-            getTokenAccsForPools: function(pools, tokenAccounts) {
+            // Gets token accounts associated with specified pools
+            getTokenAccsForPools: function (pools, tokenAccounts) {
                 const mints = [];
                 for (const pool of pools) {
                     mints.push(pool.tokenMintA);
                     mints.push(pool.tokenMintB);
                 }
-    
+
                 return mints.map(
                     (mint) => tokenAccounts.find((acc) => acc.mint.equals(mint)).account
                 );
             }
         },
-        airdropNEON: async function(address) {
+        // Requests NEON token airdrop for a given address
+        airdropNEON: async function (address) {
             const postRequestNeons = await fetch('https://api.neonfaucet.org/request_neon', {
                 method: 'POST',
-                body: JSON.stringify({"amount": 100, "wallet": address}),
+                body: JSON.stringify({ "amount": 100, "wallet": address }),
                 headers: { 'Content-Type': 'application/json' }
             });
             console.log('Airdrop NEONs to', address);
 
             await config.utils.asyncTimeout(1000);
         },
-        airdropSOL: async function(account) {
+        // Requests SOL airdrop for a given account
+        airdropSOL: async function (account) {
             let postRequest = await fetch(config.SOLANA_NODE, {
                 method: 'POST',
-                body: JSON.stringify({"jsonrpc":"2.0", "id":1, "method":"requestAirdrop", "params": [account.publicKey.toBase58(), 100000000000]}),
+                body: JSON.stringify({ "jsonrpc": "2.0", "id": 1, "method": "requestAirdrop", "params": [account.publicKey.toBase58(), 100000000000] }),
                 headers: { 'Content-Type': 'application/json' }
             });
             console.log('Airdrop SOLs to', account.publicKey.toBase58());
 
             await config.utils.asyncTimeout(1000);
         },
-        asyncTimeout: async function(timeout) {
-            return new Promise((resolve) => {
-                setTimeout(() => resolve(), timeout);
-            })
-        }
     },
 };
 module.exports = { config };
